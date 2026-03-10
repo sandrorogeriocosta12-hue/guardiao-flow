@@ -402,7 +402,72 @@ python -m backend.app_websocket
 
 ---
 
-## 📝 Próximos Passos
+## � Monitoramento e Logs
+
+### Scripts de Monitoramento
+
+O sistema inclui ferramentas avançadas para monitoramento em tempo real:
+
+#### `monitor_logs.py` - Monitor Avançado
+```bash
+# Executar monitoramento em tempo real
+python3 monitor_logs.py
+
+# Ou como background process
+python3 monitor_logs.py &
+```
+
+**Funcionalidades:**
+- ✅ Monitora conexões WebSocket em tempo real
+- 📊 Estatísticas automáticas (conexões, visitas, erros)
+- 📝 Log estruturado com timestamps
+- 🔄 Detecção de eventos importantes
+- 💾 Logs salvos em `logs/monitor.log`
+
+#### `monitor_logs.sh` - Monitor Básico
+```bash
+# Executar script simples
+./monitor_logs.sh
+```
+
+### Eventos Monitorados
+
+| Evento | Descrição | Importância |
+|--------|-----------|-------------|
+| `websocket_connect` | Cliente conectou via WebSocket | Alta |
+| `visit_created` | Nova visita registrada | Alta |
+| `visit_approved` | Visita liberada pelo morador | Alta |
+| `location_update` | GPS atualizado | Média |
+| `geofence_trigger` | Entrada/saída de zona segura | Alta |
+| `error` | Erro detectado | Crítica |
+
+### Dashboard de Produção
+
+Para produção no Railway, use o dashboard integrado:
+1. Acesse seu projeto no [Railway Dashboard](https://railway.app)
+2. Vá para "Logs" na aba lateral
+3. Visualize logs em tempo real
+4. Configure alertas para erros críticos
+
+### Teste do Sistema
+
+```bash
+# 1. Iniciar servidor
+python3 backend/app_websocket.py
+
+# 2. Iniciar monitoramento (em outro terminal)
+python3 monitor_logs.py
+
+# 3. Testar funcionalidades:
+# - Visitante: http://localhost:5001/
+# - Morador: http://localhost:5001/morador.html
+# - Porteiro: http://localhost:5001/monitor.html
+# - Interfone: http://localhost:5001/interfone.html
+```
+
+---
+
+## �📝 Próximos Passos
 
 - [ ] Integrar socket.io com JavaScript do frontend
 - [ ] Histórico persisstido de visitas
