@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Sync Test - Guardião Flow</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00d9ff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: #1e293b;
+            border-left: 4px solid #00d9ff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .panel.porteiro { border-left-color: #ff6b6b; }
+        .panel.interfone { border-left-color: #4ecdc4; }
+        .panel.visitante { border-left-color: #45b7d1; }
+        .panel.morador { border-left-color: #96ceb4; }
+
+        .panel h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #888;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .event-log {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .event {
+            padding: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #64748b;
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 2px;
+        }
+
+        .event.received {
+            border-left-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .event.sent {
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .timestamp {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .stat {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #334155;
+        }
+
+        .stat-item {
+            background: rgba(51, 65, 85, 0.5);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 11px;
+        }
+
+        .stat-value {
+            color: #00d9ff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .timeline {
+            margin-top: 30px;
+            padding: 20px;
+            background: #1e293b;
+            border-radius: 8px;
+        }
+
+        .timeline h3 {
+            margin-bottom: 15px;
+            color: #00d9ff;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-time {
+            font-size: 12px;
+            color: #94a3b8;
+            min-width: 70px;
+        }
+
+        .timeline-content {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .alert {
+            background: #7c3aed;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 WebSocket Sync Test - Guardião Flow</h1>
+
+        <div class="alert">
+            <strong>ℹ️ Test Instructions:</strong> Open this page in 4 separate browser tabs/windows and resize them side-by-side. 
+            Use the control buttons below to simulate real-time events and watch all screens update simultaneously via WebSocket.
+        </div>
+
+        <div class="controls">
+            <button onclick="testPorteiro()">👮 Porteiro (Dashboard)</button>
+            <button onclick="testInterfone()">📱 Interfone (QR)</button>
+            <button onclick="testVisitante()">👤 Visitante (Entrada)</button>
+            <button onclick="testMorador()">🏠 Morador (Aprovação)</button>
+        </div>
+
+        <div class="dashboard">
+            <div class="panel porteiro">
+                <h2><span class="status-dot" id="dot-porteiro"></span> Porteiro (Dashboard)</h2>
+                <div class="event-log" id="log-porteiro"></div>
+                <div class="stat">
+                    <div class="stat-item">
+                        <div class="stat-label">Events Received</div>
+                        <div class="stat-value" id="count-porteiro">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Last Event</div>
+                        <div class="stat-value" id="last-porteiro">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel interfone">
+                <h2><span class="status-dot" id="dot-interfone"></span> Interfone (Tablet QR)</h2>
+                <div class="event-log" id="log-interfone"></div>
+                <div class="stat">
+                    <div class="stat-item">
+                        <div class="stat-label">Events Received</div>
+                        <div class="stat-value" id="count-interfone">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Last Event</div>
+                        <div class="stat-value" id="last-interfone">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel visitante">
+                <h2><span class="status-dot" id="dot-visitante"></span> Visitante (Entrada)</h2>
+                <div class="event-log" id="log-visitante"></div>
+                <div class="stat">
+                    <div class="stat-item">
+                        <div class="stat-label">Events Received</div>
+                        <div class="stat-value" id="count-visitante">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Last Event</div>
+                        <div class="stat-value" id="last-visitante">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel morador">
+                <h2><span class="status-dot" id="dot-morador"></span> Morador (Aprovação)</h2>
+                <div class="event-log" id="log-morador"></div>
+                <div class="stat">
+                    <div class="stat-item">
+                        <div class="stat-label">Events Received</div>
+                        <div class="stat-value" id="count-morador">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Last Event</div>
+                        <div class="stat-value" id="last-morador">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <h3>📊 Real-Time Event Timeline</h3>
+            <div id="timeline"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const counters = { porteiro: 0, interfone: 0, visitante: 0, morador: 0 };
+        const events = [];
+
+        // Connection handlers
+        socket.on('connect', () => {
+            console.log('✓ WebSocket connected');
+            addEvent('client', 'CONNECTED', { socketId: socket.id }, 'connected');
+            updateAllDots(true);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('✗ WebSocket disconnected');
+            addEvent('client', 'DISCONNECTED', {}, 'disconnected');
+            updateAllDots(false);
+        });
+
+        socket.on('error', (error) => {
+            console.error('WebSocket error:', error);
+            addEvent('client', 'ERROR', { message: error }, 'error');
+        });
+
+        // Listen for broadcast events from backend
+        socket.on('VISITA_CRIADA', (data) => {
+            broadcast('VISITA_CRIADA', data);
+        });
+
+        socket.on('VISITA_LIBERADA', (data) => {
+            broadcast('VISITA_LIBERADA', data);
+        });
+
+        socket.on('LOCALIZACAO_ATUALIZADA', (data) => {
+            broadcast('LOCALIZACAO_ATUALIZADA', data);
+        });
+
+        socket.on('VISITANTE_CHEGOU_DESTINO', (data) => {
+            broadcast('VISITANTE_CHEGOU_DESTINO', data);
+        });
+
+        socket.on('RETORNO_INICIADO', (data) => {
+            broadcast('RETORNO_INICIADO', data);
+        });
+
+        socket.on('GEOFENCE_ACIONADO', (data) => {
+            broadcast('GEOFENCE_ACIONADO', data);
+        });
+
+        socket.on('VISITA_FINALIZADA', (data) => {
+            broadcast('VISITA_FINALIZADA', data);
+        });
+
+        socket.on('VISITA_REJEITADA', (data) => {
+            broadcast('VISITA_REJEITADA', data);
+        });
+
+        function broadcast(eventName, data) {
+            // Log to all panels
+            logToPanel('porteiro', eventName, data);
+            logToPanel('interfone', eventName, data);
+            logToPanel('visitante', eventName, data);
+            logToPanel('morador', eventName, data);
+            
+            addEvent('server', eventName, data, 'received');
+        }
+
+        function logToPanel(panel, eventName, data) {
+            const log = document.getElementById(`log-${panel}`);
+            const count = document.getElementById(`count-${panel}`);
+            const last = document.getElementById(`last-${panel}`);
+            
+            counters[panel]++;
+            
+            const entry = document.createElement('div');
+            entry.classList.add('event', 'received');
+            entry.innerHTML = `
+                <div><strong>${eventName}</strong></div>
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            log.insertBefore(entry, log.firstChild);
+            while (log.children.length > 20) log.removeChild(log.lastChild);
+            
+            count.textContent = counters[panel];
+            last.textContent = eventName.substring(0, 15);
+        }
+
+        function addEvent(source, eventName, data, type = 'sent') {
+            const timeline = document.getElementById('timeline');
+            const time = new Date().toLocaleTimeString();
+            
+            const item = document.createElement('div');
+            item.classList.add('timeline-item');
+            item.innerHTML = `
+                <div class="timeline-time">${time}</div>
+                <div class="timeline-content">
+                    <strong>${source.toUpperCase()}: ${eventName}</strong>
+                    <div>${JSON.stringify(data).substring(0, 100)}...</div>
+                </div>
+            `;
+            
+            timeline.insertBefore(item, timeline.firstChild);
+            while (timeline.children.length > 30) timeline.removeChild(timeline.lastChild);
+            
+            events.push({ source, eventName, data, time, type });
+        }
+
+        function updateAllDots(connected) {
+            ['porteiro', 'interfone', 'visitante', 'morador'].forEach(panel => {
+                const dot = document.getElementById(`dot-${panel}`);
+                if (connected) {
+                    dot.classList.add('connected');
+                } else {
+                    dot.classList.remove('connected');
+                }
+            });
+        }
+
+        function testPorteiro() {
+            socket.emit('REGISTRAR_VISITA', { 
+                visita_id: 1, 
+                nome: 'João da Silva',
+                placa: 'ABC1234',
+                destino: 'Casa 1719'
+            });
+            addEvent('porteiro', 'REGISTRAR_VISITA', {}, 'sent');
+        }
+
+        function testInterfone() {
+            socket.emit('GERAR_QR', { timestamp: new Date() });
+            addEvent('interfone', 'GERAR_QR', {}, 'sent');
+        }
+
+        function testVisitante() {
+            socket.emit('ENVIAR_GPS', { 
+                visita_id: 1,
+                latitude: -23.5505,
+                longitude: -46.6333
+            });
+            addEvent('visitante', 'ENVIAR_GPS', {}, 'sent');
+        }
+
+        function testMorador() {
+            socket.emit('AUTORIZAR_VISITA', { 
+                visita_id: 1, 
+                morador_id: 1,
+                token: 'test-token'
+            });
+            addEvent('morador', 'AUTORIZAR_VISITA', {}, 'sent');
+        }
+
+        console.log('✓ WebSocket test page loaded');
+    </script>
+</body>
+</html>

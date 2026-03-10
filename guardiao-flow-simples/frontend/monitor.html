@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardião Flow - Painel do Porteiro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .header-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .content {
+            display: flex;
+            flex: 1;
+            gap: 15px;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            width: 350px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-gerar-qr {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+
+        .btn-gerar-qr:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-gerar-qr:disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .visitas-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .visita-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .visita-item:hover {
+            background: #f0f1ff;
+            transform: translateX(5px);
+        }
+
+        .visita-item.active {
+            background: #e8ebff;
+            border-left-color: #764ba2;
+            font-weight: 600;
+        }
+
+        .visita-nome {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .visita-meta {
+            font-size: 12px;
+            color: #999;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .visita-status {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .status-aguardando {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-entrada {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-saida {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .map-container {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .empty-state {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            text-align: center;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+        .toast.success {
+            background: #4CAF50;
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                flex-direction: column;
+            }
+
+            .left-panel {
+                width: 100%;
+                max-height: 40%;
+            }
+
+            .map-container {
+                max-height: 60%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚪 Guardião Flow - Porteiro</h1>
+            <div class="header-info">
+                <div>Visitantes: <strong id="count-visitantes">0</strong></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="left-panel">
+                <div class="panel-header">
+                    Visitantes Ativos
+                    <button class="btn-gerar-qr" id="btn-gerar-qr">+ Gerar QR</button>
+                </div>
+                <div class="visitas-list" id="visitas-list">
+                    <div class="loader">
+                        <span class="spinner"></span> Carregando...
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div class="empty-state" id="empty-state">
+                    <p>🗺️ Selecione um visitante para ver a localização</p>
+                </div>
+                <div id="map" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_HOST = window.location.origin;
+        let map = null;
+        let markers = {};
+        let selectedVisitaId = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarVisitasInicial();
+            document.getElementById('btn-gerar-qr').addEventListener('click', gerarNovoQR);
+        });
+
+        async function carregarVisitasInicial() {
+            try {
+                const response = await fetch(`${API_HOST}/api/visitas_ativas_porteiro`);
+                const visitas = await response.json();
+                
+                document.getElementById('visitas-list').innerHTML = '';
+                visitas.forEach(v => adicionarVisitaItem(v));
+                document.getElementById('count-visitantes').textContent = visitas.length;
+
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('visitas-list').innerHTML = '<p style="color:red;padding:20px;">Erro ao carregar</p>';
+            }
+        }
+
+        function adicionarVisitaItem(visita) {
+            const item = document.createElement('div');
+            item.className = 'visita-item';
+            item.innerHTML = `
+                <div class="visita-nome">${visita.nome}</div>
+                <div class="visita-meta">
+                    <div>🚗 ${visita.placa || 'N/A'}</div>
+                    <div>🏠 Casa ${visita.destino}</div>
+                </div>
+                <span class="visita-status ${getStatusClass(visita.status)}">
+                    ${getStatusText(visita.status)}
+                </span>
+            `;
+
+            item.addEventListener('click', () => selecionarVisita(visita));
+            document.getElementById('visitas-list').appendChild(item);
+        }
+
+        function getStatusClass(status) {
+            if (status === 'AGUARDANDO_MORADOR') return 'status-aguardando';
+            if (status === 'EM_ROTA_ENTRADA') return 'status-entrada';
+            if (status === 'EM_ROTA_SAIDA') return 'status-saida';
+            return 'status-aguardando';
+        }
+
+        function getStatusText(status) {
+            const textos = {
+                'AGUARDANDO_MORADOR': '⏳ Aguardando',
+                'EM_ROTA_ENTRADA': '🚗 Entrando',
+                'EM_ROTA_SAIDA': '🚗 Saindo'
+            };
+            return textos[status] || status;
+        }
+
+        function selecionarVisita(visita) {
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('map').style.display = 'block';
+            inicializarMapa(visita);
+        }
+
+        function inicializarMapa(visita) {
+            if (!map) {
+                map = L.map('map').setView([-23.5498, -46.6325], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+            }
+
+            Object.values(markers).forEach(m => map.removeLayer(m));
+            markers = {};
+
+            L.marker([-23.5490, -46.6320]).bindPopup('Portaria').addTo(map);
+            L.marker([visita.latitude || -23.5505, visita.longitude || -46.6333]).bindPopup(`Casa ${visita.destino}`).addTo(map);
+
+            if (visita.latitude && visita.longitude) {
+                map.setView([visita.latitude, visita.longitude], 15);
+            }
+        }
+
+        async function gerarNovoQR() {
+            const btn = document.getElementById('btn-gerar-qr');
+            btn.disabled = true;
+
+            try {
+                await fetch(`${API_HOST}/api/gerar_qr`, { method: 'POST' });
+                mostrarToast('✓ QR gerado!', 'success');
+                setTimeout(carregarVisitasInicial, 1000);
+            } catch (error) {
+                mostrarToast('Erro', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function mostrarToast(msg, tipo = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        setInterval(carregarVisitasInicial, 5000);
+    </script>
+</body>
+</html>

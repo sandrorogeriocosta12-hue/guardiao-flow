@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardião Flow - Interfone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            color: white;
+            user-select: none;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease;
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .content {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            animation: slideUp 0.6s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .qr-display {
+            margin: 30px 0;
+            min-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #qr-img {
+            max-width: 100%;
+            width: 300px;
+            height: 300px;
+            object-fit: contain;
+            animation: zoomIn 0.4s ease;
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .instructions {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.8;
+            margin: 30px 0 0 0;
+        }
+
+        .instructions strong {
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .waiting-state {
+            color: #333;
+            font-size: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            min-height: 320px;
+            justify-content: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-radius: 50%;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 14px;
+            opacity: 0.7;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 30px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .logo {
+                font-size: 36px;
+            }
+
+            #qr-img {
+                width: 200px;
+                height: 200px;
+            }
+
+            .instructions {
+                font-size: 14px;
+            }
+        }
+
+        /* Animação de transição entre estados */
+        .transition {
+            animation: fadeOut 0.3s ease;
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status">
+        <div class="status-dot"></div>
+        <span id="status-text">Sistema Ativo</span>
+    </div>
+
+    <div class="container">
+        <div class="logo">🚪</div>
+        <h1>GUARDIÃO FLOW</h1>
+
+        <div class="content">
+            <div id="waiting-state" class="waiting-state">
+                <div class="spinner"></div>
+                <p>Aguardando acesso...</p>
+                <small>Porteiro gerará QR Code quando necessário</small>
+            </div>
+
+            <div id="qr-state" class="qr-display" style="display:none;">
+                <img id="qr-img" src="" alt="QR Code">
+            </div>
+
+            <div class="instructions">
+                <p>
+                    <strong>📱 Aponte seu telefone</strong> para o QR Code
+                </p>
+                <p style="margin-top: 10px; font-size: 14px; color: #999;">
+                    O QR Code será atualizado automaticamente a cada 2 minutos
+                </p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Sistema de Controle de Acesso Inteligente</p>
+        </div>
+    </div>
+
+    <script>
+        const API_HOST = window.location.origin;
+        let currentQRId = null;
+        let qrRefreshInterval = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarNovoQR();
+            // Renovar QR a cada 2 minutos automaticamente
+            setInterval(carregarNovoQR, 120000);
+        });
+
+        async function carregarNovoQR() {
+            try {
+                const response = await fetch(`${API_HOST}/api/gerar_qr`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                currentQRId = result.qr_id;
+                exibirQRCode(result.qr_id);
+
+            } catch (error) {
+                console.error('Erro ao carregar QR:', error);
+                document.getElementById('status-text').textContent = 'Erro de conexão';
+            }
+        }
+
+        function exibirQRCode(qrId) {
+            const qrImg = document.getElementById('qr-img');
+            const waitingState = document.getElementById('waiting-state');
+            const qrState = document.getElementById('qr-state');
+
+            qrImg.src = `${API_HOST}/api/qrcode/${qrId}`;
+
+            // Transição suave
+            waitingState.classList.add('transition');
+            setTimeout(() => {
+                waitingState.style.display = 'none';
+                qrState.style.display = 'flex';
+                document.getElementById('status-text').textContent = 'QR Code Ativo';
+            }, 300);
+
+            // Renovar após 2 minutos
+            if (qrRefreshInterval) clearInterval(qrRefreshInterval);
+            qrRefreshInterval = setTimeout(() => {
+                if (document.hidden) return; // Não renovar se página não visível
+                ocultarQRCode();
+            }, 119000); // 1 segundo antes de completar 2 minutos
+        }
+
+        function ocultarQRCode() {
+            const waitingState = document.getElementById('waiting-state');
+            const qrState = document.getElementById('qr-state');
+
+            qrState.classList.add('transition');
+            setTimeout(() => {
+                qrState.style.display = 'none';
+                waitingState.style.display = 'flex';
+                waitingState.classList.remove('transition');
+                document.getElementById('status-text').textContent = 'Aguardando novo código...';
+                carregarNovoQR();
+            }, 300);
+        }
+
+        // Manter tela ativa (previne screen lock)
+        document.addEventListener('mousemove', () => {
+            if (document.body.classList.contains('idle')) {
+                document.body.classList.remove('idle');
+            }
+        });
+
+        document.addEventListener('touchmove', () => {
+            if (document.body.classList.contains('idle')) {
+                document.body.classList.remove('idle');
+            }
+        });
+
+        // Atualizar quando página ficar visível novamente
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('Página visível novamente');
+            }
+        });
+    </script>
+</body>
+</html>
