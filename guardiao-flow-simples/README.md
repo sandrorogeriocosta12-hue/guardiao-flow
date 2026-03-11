@@ -105,6 +105,55 @@ python app.py
 
 ---
 
+## 📱 Sistema WhatsApp com Fallback Automático
+
+Novo sistema inteligente de notificação com timeout:
+
+```
+VISITANTE ESCANEIA QR
+    ↓
+PORTEIRO CRIA VISITA
+    ↓
+BOT 🤖 ENVIA WHATSAPP → MORADOR
+    ↓
+    ├─📱 MORADOR RESPONDE (SIM/NÃO)
+    │  └─ Visita é LIBERADA ou REJEITADA ✅
+    │
+    └─⏰ MORADOR NÃO RESPONDE (30s timeout)
+       └─ Visita vai pro PORTEIRO 👮
+          ├─ PORTEIRO LIBERA (Manual)
+          └─ PORTEIRO REJEITA (Manual)
+```
+
+### 🔧 Configuração Rápida
+
+1. **Criar conta Twilio**: [twilio.com/console](https://www.twilio.com/console)
+2. **Ativar WhatsApp Sandbox**
+3. **Copiar credenciais** (Account SID, Auth Token)
+4. **Configurar variáveis de ambiente:**
+
+```bash
+export TWILIO_ACCOUNT_SID="ACxxxxx"
+export TWILIO_AUTH_TOKEN="xxxxx"
+export TWILIO_WHATSAPP_NUMBER="whatsapp:+14155238886"
+export TIMEOUT_MORADOR=30  # segundos
+```
+
+5. **Configurar Webhook no Twilio:**
+   - URL: `https://seu-app/api/webhook/whatsapp_resposta`
+   - Método: POST
+
+📖 **Guia Completo**: Veja [SETUP_WHATSAPP.md](SETUP_WHATSAPP.md)
+
+**Features:**
+- ✅ Notificação automática via WhatsApp
+- ⏰ Timeout automático (padrão 30s)
+- 📞 Fallback para porteiro se morador não responder
+- 🔄 WebSocket em tempo real
+- 📊 Histórico de todas as respostas
+
+---
+
 ## 📱 Fluxo Completo de Uma Visita (Closed-Loop)
 
 ### Fase 1: Preparação (T0:00 a T0:05)
