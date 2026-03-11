@@ -5,7 +5,6 @@ services:
     plan: free
     region: sao-paulo
     buildCommand: pip install -r requirements.txt
-    startCommand: cd guardiao-flow-simples && python3 -m backend.app_websocket
     envVars:
       - key: PORT
         value: 5001
