@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: guardiao-flow
+    env: python
+    plan: free
+    region: sao-paulo
+    buildCommand: cd guardiao-flow-simples && pip install -r backend/requirements.txt
+    startCommand: cd guardiao-flow-simples && python3 -m backend.app_websocket
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: TIMEOUT_MORADOR
+        value: 30
+      - key: FLASK_ENV
+        value: production
