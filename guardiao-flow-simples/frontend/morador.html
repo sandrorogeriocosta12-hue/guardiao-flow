@@ -28,6 +28,7 @@
             max-width: 500px;
             width: 100%;
             overflow: hidden;
+            position: relative;
         }
 
         .header {
@@ -35,6 +36,7 @@
             color: white;
             padding: 30px 20px;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
@@ -55,6 +57,27 @@
             font-size: 12px;
             margin-top: 10px;
             font-weight: 600;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff9800;
+            animation: pulse 2s infinite;
+        }
+
+        .connection-status.connected {
+            background: #4CAF50;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
 
         .content {
@@ -85,6 +108,7 @@
             font-size: 14px;
             transition: all 0.3s;
             font-family: 'Courier New', monospace;
+            margin-bottom: 15px;
         }
 
         .token-section input:focus {
@@ -100,49 +124,33 @@
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        .btn-carregar:hover {
+        .btn-carregar:hover:not(:disabled) {
             background: #5568d3;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn-carregar:active {
-            transform: translateY(0);
-        }
-
         .btn-carregar:disabled {
-            background: #cccccc;
+            background: #ccc;
             cursor: not-allowed;
-            transform: none;
-        }
-
-        .visitas-container {
-            display: none;
-        }
-
-        .visitas-container.show {
-            display: block;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
         }
 
         .visita-card {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 15px;
-            border-radius: 8px;
             transition: all 0.3s;
             animation: slideIn 0.3s ease;
         }
@@ -150,24 +158,26 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateX(-20px);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateX(0);
             }
         }
 
         .visita-card:hover {
-            background: #f0f1ff;
-            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
         }
 
         .visita-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: baseline;
             margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
         }
 
         .visita-nome {
@@ -179,21 +189,18 @@
         .visita-tempo {
             font-size: 12px;
             color: #999;
-            background: white;
-            padding: 4px 12px;
-            border-radius: 20px;
+            font-weight: 500;
         }
 
         .visita-detalhes {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .detalhe {
             font-size: 13px;
-            color: #666;
         }
 
         .detalhe-label {
@@ -234,7 +241,7 @@
             color: white;
         }
 
-        .btn-liberar:hover {
+        .btn-liberar:hover:not(:disabled) {
             background: #45a049;
             transform: scale(1.05);
         }
@@ -250,7 +257,7 @@
             color: white;
         }
 
-        .btn-rejeitar:hover {
+        .btn-rejeitar:hover:not(:disabled) {
             background: #da190b;
             transform: scale(1.05);
         }
@@ -275,36 +282,31 @@
             to { transform: rotate(360deg); }
         }
 
-        .connection-status {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #999;
-            animation: pulse 2s infinite;
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
         }
 
-        .connection-status.connected {
-            background: #4CAF50;
-            animation: none;
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 20px;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+        .visitas-container {
+            max-height: 600px;
+            overflow-y: auto;
         }
 
         .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
+            padding: 15px 20px;
             background: #333;
             color: white;
-            padding: 15px 20px;
             border-radius: 8px;
-            font-size: 14px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
             animation: slideUp 0.3s ease;
             z-index: 1000;
         }
@@ -317,35 +319,45 @@
             background: #f44336;
         }
 
+        .toast.info {
+            background: #2196F3;
+        }
+
         @keyframes slideUp {
             from {
-                transform: translateY(100px);
                 opacity: 0;
+                transform: translateY(20px);
             }
             to {
-                transform: translateY(0);
                 opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        @media (max-width: 600px) {
-            .header h1 {
-                font-size: 22px;
+        @media (max-width: 500px) {
+            .container {
+                border-radius: 0;
+                max-width: 100%;
             }
 
-            .visita-detalhes {
-                grid-template-columns: 1fr;
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .btn-acao {
+                font-size: 13px;
+                padding: 10px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container" style="position: relative;">
+    <div class="container">
         <div class="header">
             <div class="connection-status" id="connection-status"></div>
-            <h1>Guardião Flow</h1>
-            <p>Painel de Autorização de Visitantes</p>
-            <div class="status-badge" id="status-badge">Desconectado</div>
+            <h1>🏠 Painel do Morador</h1>
+            <p>Autorize visitantes em tempo real</p>
+            <div class="status-badge" id="status-badge">Offline</div>
         </div>
 
         <div class="content">
@@ -371,62 +383,15 @@
         </div>
     </div>
 
-        <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-        <script>
-            const API_HOST = window.location.origin;
-            let moradorToken = null;
-            let visitasAtivas = {};
-            let socket = null;
-
-            document.addEventListener('DOMContentLoaded', () => {
-                // Se o token estiver na query string, carrega automaticamente
-                const params = new URLSearchParams(window.location.search);
-                const token = params.get('token');
-                if (token) {
-                    document.getElementById('token-input').value = token;
-                    carregarVisitasPendentes(token);
-                }
-            });
-
-            function conectarSocketMorador(token) {
-                if (socket) return;
-                socket = io();
-
-                socket.on('connect', () => {
-                    console.log('[✓] Socket conectado');
-                    socket.emit('ENTRAR_SALA', { room: `morador_${token}` });
-                    atualizarStatusConexao(true);
-                });
-
-                socket.on('disconnect', () => {
-                    console.log('[✗] Socket desconectado');
-                    atualizarStatusConexao(false);
-                });
-
-                socket.on('VISITANTE_AGUARDANDO_AUTORIZACAO', (payload) => {
-                    console.log('VISITANTE_AGUARDANDO_AUTORIZACAO', payload);
-                    const data = payload.data || payload;
-                    adicionarVisita(data);
-                });
-
-                socket.on('VISITA_LIBERADA', (payload) => {
-                    const data = payload.data || payload;
-                    removerVisita(data.visita_id);
-                    mostrarToast('Visitante liberado', 'success');
-                });
-
-                socket.on('VISITA_REJEITADA', (payload) => {
-                    const data = payload.data || payload;
-                    removerVisita(data.visita_id);
-                    mostrarToast('Visitante recusado', 'error');
-                });
-            }
-        </script>
-    </body>
-    </html>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const API_HOST = window.location.origin;
+        let moradorToken = null;
         let visitasAtivas = {};
+        let socket = null;
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Se o token estiver na query string, carrega automaticamente
             const params = new URLSearchParams(window.location.search);
             const tokenUrl = params.get('token');
             if (tokenUrl) {
@@ -434,6 +399,7 @@
                 setTimeout(() => carregarVisitasPendentes(tokenUrl), 500);
             }
 
+            // Click no botão carregar
             document.getElementById('btn-carregar-visitas').addEventListener('click', () => {
                 const token = document.getElementById('morador-token').value.trim();
                 if (token) {
@@ -443,6 +409,7 @@
                 }
             });
 
+            // Enter no input
             document.getElementById('morador-token').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     document.getElementById('btn-carregar-visitas').click();
@@ -458,10 +425,10 @@
             
             if (conectado) {
                 badge.classList.add('connected');
-                statusText.textContent = moradorToken ? 'Conectado' : 'Conectado';
+                statusText.textContent = '🟢 Conectado';
             } else {
                 badge.classList.remove('connected');
-                statusText.textContent = 'Offline';
+                statusText.textContent = '🔴 Offline';
             }
         }
 
@@ -469,13 +436,14 @@
             moradorToken = token;
             
             const btn = document.getElementById('btn-carregar-visitas');
+            const btnText = document.getElementById('btn-text');
             btn.disabled = true;
-            document.getElementById('btn-text').innerHTML = '<span class="spinner"></span> Carregando...';
+            btnText.innerHTML = '<span class="spinner"></span> Carregando...';
 
             try {
                 const response = await fetch(`${API_HOST}/api/morador/visitas_pendentes/${token}`);
                 if (!response.ok) {
-                    throw new Error('Token inválido');
+                    throw new Error('Token inválido ou expirado');
                 }
 
                 const visitas = await response.json();
@@ -484,73 +452,110 @@
                 document.getElementById('visitas-lista').innerHTML = '';
 
                 document.getElementById('token-section').classList.add('hidden');
-                document.getElementById('visitas-container').classList.add('show');
 
                 visitas.forEach(v => adicionarVisita(v));
 
                 atualizarStatusConexao(true);
+                conectarSocketMorador(token);
 
                 if (visitas.length === 0) {
                     document.getElementById('empty-state').style.display = 'block';
+                } else {
+                    document.getElementById('empty-state').style.display = 'none';
                 }
 
             } catch (error) {
                 console.error('Erro ao carregar visitas:', error);
                 mostrarToast('Erro: ' + error.message, 'error');
                 document.getElementById('token-section').classList.remove('hidden');
-                document.getElementById('visitas-container').classList.remove('show');
             } finally {
                 btn.disabled = false;
-                document.getElementById('btn-text').innerHTML = 'Carregar Visitantes Pendentes';
+                btnText.textContent = 'Carregar Visitantes Pendentes';
             }
         }
 
+        function conectarSocketMorador(token) {
+            if (socket) return;
+            
+            socket = io();
+
+            socket.on('connect', () => {
+                console.log('[✓] Socket conectado');
+                socket.emit('ENTRAR_SALA', { room: `morador_${token}` });
+            });
+
+            socket.on('disconnect', () => {
+                console.log('[✗] Socket desconectado');
+                atualizarStatusConexao(false);
+            });
+
+            socket.on('VISITANTE_AGUARDANDO_AUTORIZACAO', (payload) => {
+                console.log('Nova visita:', payload);
+                const data = payload.data || payload;
+                adicionarVisita(data);
+                mostrarToast('🔔 Novo visitante aguardando', 'info');
+            });
+
+            socket.on('VISITA_LIBERADA', (payload) => {
+                const data = payload.data || payload;
+                removerVisita(data.visita_id || data.id);
+                mostrarToast('✓ Visitante liberado', 'success');
+            });
+
+            socket.on('VISITA_REJEITADA', (payload) => {
+                const data = payload.data || payload;
+                removerVisita(data.visita_id || data.id);
+                mostrarToast('✕ Visitante recusado', 'error');
+            });
+        }
+
         function adicionarVisita(visita) {
-            if (visitasAtivas[visita.id]) return;
-            visitasAtivas[visita.id] = visita;
+            const visitaId = visita.id || visita.visita_id;
+            if (visitasAtivas[visitaId]) return;
+            visitasAtivas[visitaId] = visita;
 
             const card = document.createElement('div');
             card.className = 'visita-card';
-            card.id = `visita-${visita.id}`;
+            card.id = `visita-${visitaId}`;
 
             const agora = new Date();
-            const entrada = new Date(visita.horario_entrada);
+            const entrada = new Date(visita.horario_entrada || visita.entrada);
             const minutos = Math.floor((agora - entrada) / 60000);
             const tempoTexto = minutos === 0 ? 'agora' : `há ${minutos}m`;
 
             card.innerHTML = `
                 <div class="visita-header">
-                    <div class="visita-nome">${visita.nome}</div>
-                    <div class="visita-tempo">${tempoTexto}</div>
+                    <div class="visita-nome">👤 ${visita.nome}</div>
+                    <div class="visita-tempo">⏰ ${tempoTexto}</div>
                 </div>
 
                 <div class="visita-detalhes">
                     <div class="detalhe">
-                        <span class="detalhe-label">Placa</span>
+                        <span class="detalhe-label">🚗 Placa</span>
                         <span class="detalhe-valor">${visita.placa || 'Não informada'}</span>
                     </div>
                     <div class="detalhe">
-                        <span class="detalhe-label">Destino</span>
+                        <span class="detalhe-label">🏠 Destino</span>
                         <span class="detalhe-valor">Casa ${visita.destino}</span>
                     </div>
                 </div>
 
                 <div class="visita-acoes">
-                    <button class="btn-acao btn-liberar" data-visita-id="${visita.id}">
+                    <button class="btn-acao btn-liberar" data-visita-id="${visitaId}">
                         ✓ Liberar
                     </button>
-                    <button class="btn-acao btn-rejeitar" data-visita-id="${visita.id}">
+                    <button class="btn-acao btn-rejeitar" data-visita-id="${visitaId}">
                         ✕ Recusar
                     </button>
                 </div>
             `;
 
             card.querySelector('.btn-liberar').addEventListener('click', () => {
-                autorizarVisita(visita.id, card);
+                autorizarVisita(visitaId, card);
             });
 
             card.querySelector('.btn-rejeitar').addEventListener('click', () => {
-                rejeitarVisita(visita.id, card);
+                rejeitarVisita(visitaId, card);
             });
 
             document.getElementById('visitas-lista').appendChild(card);
@@ -585,10 +590,8 @@
                 if (!response.ok) throw new Error('Erro ao autorizar');
 
                 const result = await response.json();
-                if (result.status === 'liberado') {
-                    mostrarToast('✓ Visitante autorizado!', 'success');
-                    removerVisita(visitaId);
-                }
+                mostrarToast('✓ Visitante autorizado!', 'success');
+                removerVisita(visitaId);
             } catch (error) {
                 console.error('Erro:', error);
                 mostrarToast('Erro: ' + error.message, 'error');
@@ -611,10 +614,8 @@
                 if (!response.ok) throw new Error('Erro ao rejeitar');
 
                 const result = await response.json();
-                if (result.status === 'rejeitado') {
-                    mostrarToast('✕ Visitante recusado', 'success');
-                    removerVisita(visitaId);
-                }
+                mostrarToast('✕ Visitante recusado', 'success');
+                removerVisita(visitaId);
             } catch (error) {
                 console.error('Erro:', error);
                 mostrarToast('Erro: ' + error.message, 'error');
