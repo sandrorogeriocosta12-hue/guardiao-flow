@@ -12,14 +12,21 @@ class Visita(db.Model):
     morador_id = db.Column(db.Integer, db.ForeignKey('moradores.id'), nullable=True)
     # Status do ciclo de vida
     status = db.Column(db.String(20), default='AGUARDANDO_CADASTRO')
+    # Status da notificação WhatsApp
+    status_whatsapp = db.Column(db.String(30), default='NENHUM')  # NOTIFICADO, SIM, NAO, TIMEOUT, PORTEIRO
     # Momentos importantes
     horario_entrada = db.Column(db.DateTime, default=datetime.now)
     horario_saida = db.Column(db.DateTime, nullable=True)
+    horario_notificacao_zap = db.Column(db.DateTime, nullable=True)  # quando foi mandado pro zap
+    horario_resposta_zap = db.Column(db.DateTime, nullable=True)     # quando morador respondeu
+    horario_timeout = db.Column(db.DateTime, nullable=True)          # quando expirou o tempo
     # Localização em tempo real
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
     # Para geofencing
     ultima_atualizacao = db.Column(db.DateTime, nullable=True)
+    # ID do widget no porteiro (se foi movido lá)
+    widget_id = db.Column(db.String(50), nullable=True)
 
 class Morador(db.Model):
     __tablename__ = 'moradores'

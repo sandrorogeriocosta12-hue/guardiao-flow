@@ -8,6 +8,7 @@ from flask_cors import CORS
 from .database import db
 from .models import Visita, Morador
 from .websocket_manager import init_socketio, emitir_para_porteiro, emitir_para_interfone, emitir_para_visitante, emitir_para_morador, nova_visita_criada, visita_liberada, visita_rejeitada, localizacao_atualizada, visitante_chegou_destino, retorno_iniciado, geofence_acionado, visita_finalizada, qr_code_gerado
+from .notificacao_service import NotificacaoService
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
@@ -68,22 +69,23 @@ def iniciar_visita():
     visita.status = 'AGUARDANDO_MORADOR'
     db.session.commit()
 
-    # Notifica porteiro e morador via WebSocket (assume condomínio 1)
+    # Notifica porteiro via WebSocket
     nova_visita_criada(1, visita)
 
-    # enviar WhatsApp avisando morador que existe visitante aguardando liberação
+    # 🎯 NOVO: Enviar notificação WhatsApp com sistema de timeout
     if morador and morador.telefone:
         try:
-            from .whatsapp_bot import send_whatsapp
-            link = f"http://{request.host}/morador.html?token={morador.token}"
-            body = (
-                f"Olá {morador.nome}, você tem um visitante aguardando: "
-                f"{visita.nome_visitante} ({visita.placa}) para a casa {visita.destino}. "
-                f"Acesse {link} para liberar."
-            )
-            send_whatsapp(morador.telefone, body)
+            # Inicia o fluxo de notificação com fallback automático
+            NotificacaoService.notificar_morador(visita.id, socketio)
+            print(f"[✅] Sistema de notificação iniciado para Visita {visita.id}")
         except Exception as e:
-            print("Erro enviando WhatsApp:", e)
+            print(f"[⚠️] Erro ao iniciar notificação: {e}")
+            # Se falhar, move direto pro porteiro
+            NotificacaoService.mover_para_porteiro(
+                visita.id, 
+                socketio, 
+                razao="Erro ao enviar WhatsApp"
+            )
     
     return jsonify({'visita_id': visita.id, 'status': visita.status})
 
@@ -292,6 +294,104 @@ def verificar_geofence(visita):
             visita_finalizada(1, visita, motivo='geofence_saida')
             
             print(f"Visita {visita.id} finalizada automaticamente por geofencing.")
+
+# ========== WEBHOOKS DE NOTIFICAÇÃO ==========
+
+@app.route('/api/webhook/whatsapp_resposta', methods=['POST'])
+def webhook_whatsapp_resposta():
+    """
+    Webhook que recebe respostas do WhatsApp via Twilio
+    Processa: SIM, NÃO, ou qualquer resposta do morador
+    """
+    try:
+        data = request.form
+        from_number = data.get('From', '').replace('whatsapp:', '')  # Remove prefixo whatsapp:
+        body = data.get('Body', '').strip().upper()
+        message_id = data.get('MessageSid', '')
+        
+        print(f"\n[📬] Webhook WhatsApp recebido!")
+        print(f"    De: {from_number}")
+        print(f"    Resposta: {body}")
+        print(f"    Msg ID: {message_id}")
+        
+        # Encontrar visita pendente de resposta deste morador
+        morador = Morador.query.filter_by(telefone=from_number).first()
+        if not morador:
+            print(f"[⚠️] Morador não encontrado: {from_number}")
+            return jsonify({'erro': 'Morador não encontrado'}), 404
+        
+        # Encontrar visita mais recente em espera
+        visita = Visita.query.filter_by(
+            morador_id=morador.id,
+            status_whatsapp='NOTIFICADO'
+        ).order_by(Visita.horario_notificacao_zap.desc()).first()
+        
+        if not visita:
+            print(f"[⚠️] Nenhuma visita pendente para este morador")
+            return jsonify({'erro': 'Nenhuma visita pendente'}), 404
+        
+        # Processar resposta
+        NotificacaoService.resposta_morador(visita.id, body, socketio)
+        
+        # Responder ao WhatsApp (confirmar recebimento)
+        TwilioResponse = """<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+            <Message>Sua resposta foi registrada. Obrigado!</Message>
+        </Response>"""
+        
+        return TwilioResponse, 200, {'Content-Type': 'application/xml'}
+        
+    except Exception as e:
+        print(f"[❌] Erro no webhook WhatsApp: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+
+# ========== ROTAS DO PORTEIRO PARA CONTROLE MANUAL ==========
+
+@app.route('/api/porteiro/liberar_visita', methods=['POST'])
+def porteiro_liberar_visita():
+    """Porteiro autoriza manualmente uma visita (caso morador não tenha respondido)"""
+    data = request.json
+    visita_id = data.get('visita_id')
+    
+    if NotificacaoService.autorizar_visita_porteiro(visita_id, socketio):
+        return jsonify({'status': 'liberada'})
+    else:
+        return jsonify({'erro': 'Falha ao liberar visita'}), 400
+
+
+@app.route('/api/porteiro/rejeitar_visita', methods=['POST'])
+def porteiro_rejeitar_visita():
+    """Porteiro rejeita manualmente uma visita"""
+    data = request.json
+    visita_id = data.get('visita_id')
+    
+    if NotificacaoService.rejeitar_visita_porteiro(visita_id, socketio):
+        return jsonify({'status': 'rejeitada'})
+    else:
+        return jsonify({'erro': 'Falha ao rejeitar visita'}), 400
+
+
+@app.route('/api/porteiro/visitas_aguardando', methods=['GET'])
+def porteiro_visitas_aguardando():
+    """Lista visitas que estão aguardando decisão do porteiro (morador não respondeu)"""
+    visitas = Visita.query.filter_by(status_whatsapp='TIMEOUT').all()
+    
+    resultado = []
+    for v in visitas:
+        morador = Morador.query.get(v.morador_id) if v.morador_id else None
+        resultado.append({
+            'visita_id': v.id,
+            'nome': v.nome_visitante,
+            'placa': v.placa,
+            'destino': v.destino,
+            'morador': morador.nome if morador else 'Desconhecido',
+            'tempo_espera': (datetime.now() - v.horario_entrada).total_seconds() / 60,
+            'horario': v.horario_entrada.strftime('%H:%M:%S')
+        })
+    
+    return jsonify(resultado)
+
 
 if __name__ == '__main__':
     # In production or during automated tests we disable the reloader to avoid
