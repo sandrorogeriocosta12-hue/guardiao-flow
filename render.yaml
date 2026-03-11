@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     region: sao-paulo
-    buildCommand: cd guardiao-flow-simples && pip install -r backend/requirements.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: cd guardiao-flow-simples && python3 -m backend.app_websocket
     envVars:
       - key: PORT
