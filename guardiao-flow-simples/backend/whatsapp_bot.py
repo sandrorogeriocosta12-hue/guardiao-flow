@@ -13,7 +13,17 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER")  # ex: whatsapp:+14155238886
 
-client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+# Cliente Twilio será criado apenas quando necessário
+client = None
+
+def get_twilio_client():
+    """Retorna o cliente Twilio, criando-o se necessário."""
+    global client
+    if client is None:
+        if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+            raise ValueError("TWILIO_ACCOUNT_SID e TWILIO_AUTH_TOKEN são obrigatórios")
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    return client
 
 print("""
 ╔════════════════════════════════════════════════════════════╗
@@ -73,7 +83,8 @@ def send_whatsapp(to_number: str, body: str):
         return None
     
     try:
-        msg = client.messages.create(
+        twilio_client = get_twilio_client()
+        msg = twilio_client.messages.create(
             body=body,
             from_=TWILIO_WHATSAPP_NUMBER,
             to=f"whatsapp:{to_number}"
