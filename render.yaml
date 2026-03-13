@@ -17,3 +17,5 @@ services:
         value: production
       - key: PYTHONPATH
         value: guardiao-flow-simples
+      - key: DATABASE_URL
+        value: sqlite:///database.db
