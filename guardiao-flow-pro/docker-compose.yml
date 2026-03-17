@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_USER: guardiaoflow
+      POSTGRES_PASSWORD: guardiaoflow_pass
+      POSTGRES_DB: guardiaoflow
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql+asyncpg://guardiaoflow:guardiaoflow_pass@db:5432/guardiaoflow
+      SECRET_KEY: dev-secret-key-not-for-production
+      REDIS_URL: redis://redis:6379/0
+      ENV: development
+      BACKEND_CORS_ORIGINS: http://localhost:3000,http://localhost:8001,http://localhost:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  celery_worker:
+    build: .
+    command: celery -A app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+asyncpg://guardiaoflow:guardiaoflow_pass@db:5432/guardiaoflow
+      REDIS_URL: redis://redis:6379/0
+      ENV: development
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+volumes:
+  pg_dev_data:
