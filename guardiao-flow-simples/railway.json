@@ -3,6 +3,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python -m backend.app_websocket"
+    "startCommand": "gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT wsgi:application"
   }
 }
