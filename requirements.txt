@@ -11,5 +11,5 @@ pytesseract==0.3.10
 opencv-python==4.8.1.78
 twilio==8.10.0
 gunicorn==22.0.0
-eventlet==0.35.2
+gevent==24.2.1
 python-dotenv==1.0.0
